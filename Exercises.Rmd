@@ -1,0 +1,549 @@
+---
+title: "Exercises"
+author: "Grace Barbacias"
+date: "2023-05-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Foreword
+
+This RMarkdown file compiles my exercise attempts (and failures) under the Seminar component of the **Decision Analysis and Forecasting** module under Professor Whitney and Luedeling for Summer Semester 2023. Tools used include *decisionAnalysis* package developed by the team running the course module.
+
+# Exercise 2
+
+*Data wrangling*
+
+In this code chunk, I just tested the functions being discussed in [data wrangling part 2](https://agtools.app/learning_r/#section-data-wrangling-part-2); I will not be showing the tables or results unless instructed (because it would be tiresome to show every data and pages will be too lengthy). Data used in this section is from CWWhitney's github [here](https://raw.githubusercontent.com/CWWhitney/teaching_R/master/participants_data.csv).
+
+I used R before but I never used the *tidyverse* package, so that was new to me. Very useful package, I might say.
+
+```{r, eval=FALSE}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(purrr)
+#browseVignettes("tidyverse")
+
+#reading data and assigning to a variable
+participants_data<- read.csv("data/participants_data.csv")
+
+#checking first 7 columns of the data
+head(participants_data,n=7)
+
+#checking the column names of the data
+names(participants_data)
+
+#checking data structure per column
+str(participants_data)
+
+#calling variable 'gender'
+participants_data$gender
+
+#select batch and age
+select(participants_data, batch, age)
+
+#select all except batch and age
+select(participants_data,-batch,-age)
+
+#selecting those who work more than 5 hours a day
+filter(participants_data, working_hours_per_day>5)
+
+#selecting those who work more than 5 hours a day and have names longer than 3 letters
+filter(participants_data, working_hours_per_day>5 & letters_in_first_name>3)
+
+#renaming 'km_home_to_zef' to 'commute'
+rename(participants_data, commute=km_home_to_zef)
+
+#mutating a new column 'age_mean' as function of 'age' and mean of the ages
+mutate(participants_data, age_mean=age*mean(age))
+
+#mutating a new column 'response_speed' populated by 'slow' if it takes >1 day to answer email else 'fast'
+mutate(participants_data, response_speed=
+         ifelse(days_to_email_response>1,'slow','fast'))
+
+#summary of participants_data with mean number of siblings and median years of study
+summarize(participants_data,mean(number_of_siblings), median(years_of_study))
+
+##using magrittr: groupby function
+#mean days to email response,
+#median letters in first name,
+#maximum years of study by gender
+participants_data %>%
+  group_by(gender) %>%
+  summarize(mean(days_to_email_response),
+            median(letters_in_first_name),
+            max(years_of_study))
+
+
+# new column called 'commute', where those who travel 
+# more than 10km to get to the office 
+# are called "commuter" and others are "local". 
+# Summarize the mean days to email response, 
+# median letters in first name, 
+# and maximum years of study. 
+participants_data<- read.csv("data/participants_data.csv")
+participants_data %>%
+  mutate(commute=ifelse( 
+           km_home_to_zef>10, 'commuter', 'local')) %>%
+           group_by(gender) %>%
+           summarize(mean(days_to_email_response), 
+            median(letters_in_first_name), 
+            max(years_of_study))
+
+##using purrr library
+# Split the data frame by batch, 
+# fit a linear model formula 
+# (days to email response as dependent 
+# and working hours as independent) 
+# to each batch, compute the summary, 
+# then extract the R^2.
+participants_data %>%
+  split(.$batch) %>%
+  map(~
+        lm(working_hours_per_day ~ 
+             days_to_email_response, 
+           data=.)) %>%
+  map(summary) %>%
+  map_dbl("r.squared")
+
+```
+
+An exception, because 'summarize' function is short, here's the summary based on mean of 'number_of_siblings' and median of years_of_study:
+
+```{r, echo=FALSE}
+
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(kableExtra)
+
+participants_data<- read.csv("data/participants_data.csv")
+
+summary1<-summarize(participants_data,mean(number_of_siblings), median(years_of_study))
+
+head(summary1)
+```
+
+Extracted R\^2 for the 'participants_data' dataset:
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(purrr)
+library(kableExtra)
+
+participants_data<- read.csv("data/participants_data.csv")
+
+
+r_squared<-participants_data %>%
+  split(.$batch) %>%
+  map(~
+        lm(working_hours_per_day ~ 
+             days_to_email_response, 
+           data=.)) %>%
+  map(summary) %>%
+  map_dbl("r.squared")
+
+head(r_squared)
+```
+
+Now onto the real exercise using the 'diamonds' dataset in-built in R:
+
+```{r, eval=FALSE}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(purrr)
+library(kableExtra)
+
+#selecting carat and price
+select(diamonds, carat, price)
+
+#filter when carat>0.5
+filter(diamonds, carat>0.5)
+
+#rename price as cost
+rename(diamonds, cost=price)
+
+#mutate a variable populated with 'expensive' if >mean of cost, else 'cheap'
+mutate(diamonds,
+         valuation=ifelse(
+           price>mean(price),'expensive','cheap'))
+
+#split into cheap and expensive
+#I created a new dataset with the mutated 'valuation' column before using the group_by function
+new_diamonds<-diamonds %>%
+  mutate(valuation=ifelse(
+           price>mean(price),'expensive','cheap'))
+  
+new_diamonds %>%
+  group_by(valuation)
+  
+#summarize using any statistics
+summarise(diamonds, mean(price), median(carat))
+
+#using magrittr
+diamonds %>%
+  mutate(valuation=ifelse( 
+          price>mean(price),'expensive','cheap')) %>%
+           group_by(valuation) %>%
+           summarize(mean(price), median(carat))
+
+
+```
+
+A look into the summary of 'diamonds' dataset using mean of price and median of carat, grouped by valuation (cheap or expensive):
+
+```{r, echo=FALSE}
+
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+
+
+summary2<-diamonds %>%
+  mutate(valuation=ifelse( 
+          price>mean(price),'expensive','cheap')) %>%
+           group_by(valuation) %>%
+           summarize(mean(price), median(carat))
+
+head(summary2)
+```
+
+# Exercise 3
+
+*Data visualization*
+
+These exercises make use of the 'participants_data' dataset from CWWhitney's github [here](https://raw.githubusercontent.com/CWWhitney/teaching_R/master/participants_data.csv), Anderson's iris data set, 'mpg' dataset, and ggplot's 'diamonds' dataset.
+
+```{r,eval=FALSE}
+
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(kableExtra)
+library(ggplot2)
+
+#reading data and assigning to object
+participants_data<- read.csv('data/participants_data.csv')
+
+#choosing one column to plot
+participants_barplot<-table(participants_data$gender)
+
+#making barplot
+plot1<-barplot(participants_barplot)
+
+# creating a scatterplot of days to email response (y) 
+# as a function of the letters in your first name (x) 
+ggplot(data=participants_data,
+       aes(x=letters_in_first_name,
+           y=days_to_email_response)) +
+  geom_point()
+
+
+# Creating a scatterplot of days to email response (y) 
+# as a function of the letters in your first name (x) 
+# with colors representing binary data 
+# related to academic parents (color) 
+# and working hours per day as bubble sizes (size)
+ggplot(data = participants_data, 
+       aes(x = letters_in_first_name,, 
+           y = days_to_email_response, 
+           color = academic_parents, 
+           size = working_hours_per_day)) + 
+  geom_point()
+
+
+##using 'iris' dataset
+# creating a scatterplot of iris petal length (y) 
+# as a function of sepal length (x) 
+# with colors representing iris species (color) 
+# and petal width as bubble sizes (size)
+ggplot(data = iris, 
+       aes(x = Sepal.Length, 
+           y = Petal.Length, 
+           color = Species, 
+           size = Petal.Width))+ 
+  geom_point()
+
+
+##using 'diamonds' dataset
+# creating a plot with the diamonds data 
+# of the carat (x) and the price (y)
+plot1 <- ggplot(data = diamonds, 
+                aes(x = carat, y = price, 
+                    alpha = 0.2)) +
+          geom_point()
+
+# Create a plot with the diamonds data 
+# of the log of carat (x) 
+# and the log of price (y)
+ggplot(data = diamonds,
+       aes(x = log(carat),
+           y = log(price),
+           alpha = 0.2)) +
+  geom_point()
+
+# creating a smaller diamonds data set (top 100 rows), 
+# creating a scatterplot with carat on the x-axis 
+# and price on the y-xis and 
+# with the color of the diamond as the color of the points
+d_small<-top_n(diamonds, n=100)
+
+ggplot(data=d_small, aes(x=carat,
+                         y=price,
+                         color=color)) +
+  geom_point()
+
+
+# creating a smaller diamonds data set (top 40 rows), 
+# creating a scatterplot with carat on the x-axis 
+# and price on the y-xis and 
+# with the cut of the diamond as the shapes for the points. 
+dsmall <- top_n(diamonds, 
+                n = 40)
+
+ggplot( data = dsmall, 
+        aes(x = carat, 
+            y = price, 
+            shape = cut)) + 
+  geom_point()
+
+# creating a plot of the diamonds data 
+# with carat on the x-axis, price on the y-axis. 
+# Use the inhibit function to set the alpha to 0.1 
+# and color to blue.
+ggplot(data = diamonds, 
+       aes(x = carat, 
+           y = price, 
+           alpha = I(0.1), 
+           color = I("blue"))) + 
+  geom_point()
+
+# creating a smaller data set of diamonds with 50 rows. 
+# creating a scatterplot and smoothed conditional 
+# means overlay with carat on the x-axis 
+# and price on the y-axis.
+dsmall <- top_n(diamonds, 
+                n = 50)
+
+ggplot(data = dsmall, 
+       aes(x = carat, 
+           y = price))+
+geom_point()+
+geom_smooth()
+
+
+# creating a smaller data set of diamonds with 50 rows. 
+# creating a scatterplot and smoothed conditional 
+# means overlay with carat on the x-axis 
+# and price on the y-axis.
+# Use 'glm' as the option for the smoothing
+dsmall <- top_n(diamonds, 
+                n = 50)
+
+ggplot(data = dsmall, 
+       aes(x = carat, 
+           y = price))+ 
+  geom_point()+ 
+geom_smooth(method = 'glm')
+
+# changing the boxplot so that the x-axis is cut and
+#  the y-axis is price divided by carat
+ggplot(data = diamonds, 
+       aes(x = cut, 
+           y = price/carat)) + 
+geom_boxplot()
+
+# jittered boxplot: x-axis is cut and
+#  the y-axis is price divided by carat
+ggplot(data = diamonds, 
+       aes(x = cut, 
+           y = price/carat)) + 
+geom_boxplot()+ 
+geom_jitter()
+
+# Changing the alpha to 0.4 to make 
+# the scatter less transparent
+ggplot(data = diamonds, 
+       aes(x = cut, 
+           y = price/carat, 
+           alpha = I(0.4))) + 
+geom_boxplot()+ 
+geom_jitter()
+
+# Changing the density plot so that the x-axis is carat 
+# and the color is the diamond color
+ggplot(data = diamonds, 
+       aes(x = carat, color=color)) +
+geom_density()
+
+# Changing the density plot so that the x-axis is carat 
+# the color is the diamond color
+# and the alpha is set to 0.3 using the inhibit function
+ggplot(data = diamonds, 
+       aes(x = carat, 
+           color = color, 
+           alpha = I(0.3))) +
+geom_density()
+
+##using 'mpg' data
+# Creating a plot of the mpg data with 
+# manufacturer as the color and a linear model 'lm'
+# as the smooth method
+ggplot(data = mpg, 
+       aes(x = displ, 
+           y = hwy,  
+           color = manufacturer)) + 
+geom_point() +
+geom_smooth(method = "lm")
+
+
+
+```
+
+Barplot from 'participants_data' dataset (gender):
+
+![](plots/participants_barplot.png)
+
+Scatter plot from 'participants_data' dataset (x=letters in first name; y=days to email response):
+
+![](plots/Participants_scatter.png)
+
+Colored scatter plot from 'participants_data' dataset with x=letters in first name; y=days to email response, academic parents (color), working hours per day as bubble sizes (size):
+
+![](plots/participants_scatter_color.png)
+
+Colored scatter plot using 'iris' dataset, with petal length (y) as a function of sepal length (x) with colors representing iris species (color) and petal width as bubble sizes (size):
+
+![](plots/Iris_scatter.png)
+
+Plot of 'diamonds' data with x=carat, and y=price:
+
+![](plots/plot1.png)
+
+Plot of 'diamonds' data with x=log(carat), and y=log(price):
+
+![](plots/diamonds_log.png)
+
+Scatter plot of 'diamonds' dataset with top 100 rows, x=carat, y=price, color=color:
+
+![](plots/diamonds_small.png)
+
+Plot of 'diamonds' dataset with top 40 rows, x=carat, y=price, shape=cut:
+
+![](plots/diamonds_smaller.png)
+
+Plot of 'diamonds' dataset with x=carat, y=price, with alpha=0.1 and blue color:
+
+![](plots/diamonds_alpha.png)
+
+Plot of 'diamonds' dataset with top=50 rows, x=carat, y=price, smoothened using geom_smooth:
+
+![](plots/diamonds_smooth.png)
+
+Plot of 'diamonds' dataset with top=50 rows, x=carat, y=price, smoothened using geom_smooth, 'glm' option:
+
+![](plots/diamonds_smooth_glm.png)
+
+Boxplot of 'diamonds' dataset where x=cut, y=price/carat:
+
+![](plots/diamonds_box.png)
+
+Jittered boxplot of 'diamonds' dataset wehre x-axis is cut and the y-axis is price divided by carat:
+
+![](plots/diamonds_jit.png)
+
+Changed alpha to 0.4:
+
+![](plots/diamonds_jit_alpha.png)
+
+Density plot of 'diamonds' dataset where x=carat, color=color:
+
+![](plots/diamonds_color.png)
+
+Changed transparency to 0.3:
+
+![](plots/diamonds_density_alpha.png)
+
+Smooth plot of 'mpg' dataset with color=manufacturer, and linear model=lm:
+
+![](plots/mpg_smooth.png)
+
+My own plot:
+
+```{r, eval=FALSE}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(kableExtra)
+library(ggplot2)
+
+
+#I will use the 'mpg' dataset
+#scatterplot:
+scatter.smooth(mpg$cty)
+
+#barchart
+barplot(mpg$cyl)
+
+#boxplot
+boxplot(mpg$displ)
+
+#custom plot with labels
+ggplot(data = diamonds) +
+  aes(x = carat,  alpha = I(0.5)) +
+  labs(x = "carat") +
+  aes(y = price) +
+  labs(y = "price") +
+  geom_point() +
+  aes(col = table) +
+  labs(col = "table") +
+  labs(title = "Prices of over 50,000 round cut diamonds")
+
+##custom analysis: correlation
+part_data <- select_if(mpg, 
+                       is.numeric)
+
+cormat <- round(cor(part_data), 
+                digits = 1)
+melted_cormat <- as.data.frame.table(cormat, 
+                                     responseName = "value")
+ggplot(data = melted_cormat, 
+       aes(x = Var1,
+           y = Var2,
+           fill = value)) + 
+geom_tile()
+```
+
+Scatterplot of 'mpg' dataset 'cty' variable (smooth):
+
+![](plots/mpg_smoothscat.png)
+
+Barplot of cyl from 'mpg' dataset:
+
+![](plots/mpg_cyl.png)
+
+Boxplot of 'mpg' dataset disp:
+
+![](plots/mpg_box.png)
+
+Custom plot with labels:
+
+![](plots/diamonds_custom.png)
+
+Correlation analysis using 'mpg' dataset:
+
+![](plots/mpg_cor.png)
