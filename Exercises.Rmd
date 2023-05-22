@@ -595,3 +595,7 @@ ggplot(data = stakeholder, aes(x = Experience,
 Plot of 'stakeholder' dataset:
 
 ![](plots/stakeholder_plot.png)
+
+# Exercise 06
+
+sample
